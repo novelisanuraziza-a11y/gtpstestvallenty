@@ -2,6 +2,12 @@
 #include <enet/enet.h>
 #include <vector>
 #include <string>
+#include <stdlib.h>
+
+// Bypassing Visual Studio 2022 UCRT linker error for obsolete MSVCRTD enet.lib
+extern "C" {
+    long (*__imp_strtol)(const char*, char**, int) = &strtol;
+}
 
 ENetHost* host = nullptr;
 

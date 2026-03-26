@@ -10,6 +10,7 @@ export class PlayerInfo {
     public tankIDName: string = "";
     public netID: number = 0;
     public ip: string = "";
+    public pass: string = "";
     
     // Core Login & Access
     public adminLevel: number = 0;
@@ -48,6 +49,7 @@ export class PlayerInfo {
 
         const data = {
             tankIDName: this.tankIDName,
+            pass: this.pass,
             gems: this.gems,
             level: this.level,
             xp: this.xp,
@@ -70,6 +72,7 @@ export class PlayerInfo {
         const data = JSON.parse(fs.readFileSync(targetFile, 'utf-8'));
         const player = new PlayerInfo();
         player.tankIDName = data.tankIDName;
+        player.pass = data.pass || "";
         player.gems = data.gems || 0;
         player.level = data.level || 1;
         player.xp = data.xp || 0;

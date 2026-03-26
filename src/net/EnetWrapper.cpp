@@ -39,8 +39,8 @@ Napi::Value CreateHost(const Napi::CallbackInfo& info) {
         return env.Null();
     }
     
-    // Enable checksums to perfectly match the GT C++ Client rules if needed
-    host->checksum = enet_crc32;
+    // Disable strict CRC32 to allow GT 5.15+ modified ENet packets
+    host->checksum = nullptr;
     enet_host_compress_with_range_coder(host); 
 
     return Napi::Boolean::New(env, true);

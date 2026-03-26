@@ -1,15 +1,21 @@
 import { resolve } from "path";
 import { PlayerInfo } from "./player/PlayerInfo";
 import { PacketHandler, TankPacketType } from "./core/PacketHandler";
+import { LoginHandler } from "./handlers/LoginHandler";
+import { PacketSender } from "./net/PacketSender";
 
 // Coba memuat addon C++ jika berhasil dibuild
 let enet: any;
+const addonPath = resolve(process.cwd(), "build/Release/enet_wrapper.node");
+console.log(`[INIT] Loading ENet addon from: ${addonPath}`);
 try {
-    enet = require(resolve(__dirname, "../../build/Release/enet_wrapper.node"));
-} catch (e) {
-    console.warn("Wajib melakukan `npm run build:addon` terlebih dahulu! Memuat stub mode sementara...");
+    enet = require(addonPath);
+    console.log(`[INIT] ENet native addon loaded successfully!`);
+} catch (e: any) {
+    console.warn(`[WARN] Failed to load ENet addon: ${e.message}`);
+    console.warn("[WARN] Running in STUB mode - no real networking!");
     enet = {
-        createHost: () => console.log("[ENet Stub] Host created!"),
+        createHost: (port: number) => console.log(`[ENet Stub] Host created on port ${port}!`),
         pollEvents: () => null,
         sendPacket: () => null,
         disconnectPeer: () => null
@@ -29,7 +35,17 @@ class GTPSServer {
 
     constructor() {
         console.log("Starting GTPS / ENet Host...");
-        enet.createHost(PORT, MAX_PEERS, MAX_CHANNELS);
+        try {
+            const result = enet.createHost(PORT, MAX_PEERS, MAX_CHANNELS);
+            console.log(`[INIT] createHost(${PORT}, ${MAX_PEERS}, ${MAX_CHANNELS}) returned: ${result}`);
+            if (!result) {
+                console.error("[ERROR] ENet host_create returned null/false! Port may already be in use or ENet init failed.");
+                process.exit(1);
+            }
+        } catch(err: any) {
+            console.error(`[ERROR] createHost threw exception: ${err.message}`);
+            process.exit(1);
+        }
         this.isRunning = true;
     }
 
@@ -77,34 +93,13 @@ class GTPSServer {
 
         // Parsing String Packet (Type 2, 3)
         if (type === 2 || type === 3) {
-            let text = data.subarray(4, data.length - 1).toString('utf-8'); // Null terminated
+            const nullIndex = data.indexOf(0, 4);
+            const textEnd = nullIndex !== -1 ? nullIndex : data.length;
+            let text = data.subarray(4, textEnd).toString("utf-8"); 
             console.log(`[TEXT DATA]: \n${text}`);
             
             if (text.includes("action|logon") || text.includes("requestedName|")) {
-                const lines = text.split("\n");
-                let requestedName = "Guest_" + Math.floor(Math.random() * 999);
-                for (const line of lines) {
-                    if (line.startsWith("requestedName|")) {
-                        requestedName = line.split("|")[1];
-                    }
-                }
-                const p = this.peers.get(event.connectID);
-                if (p) {
-                    p.tankIDName = requestedName;
-                    
-                    // Coba muat data JSON lokal jika ada
-                    const loadedData = PlayerInfo.loadFromJSON(requestedName);
-                    if (loadedData) {
-                        p.gems = loadedData.gems;
-                        p.inventory = loadedData.inventory;
-                        console.log(`[LOGIN] Akun lama ditemukan: ${requestedName} Gems: ${p.gems}`);
-                    } else {
-                        console.log(`[LOGIN] Akun baru: ${requestedName}`);
-                        p.saveToJSON(); 
-                    }
-                }
-
-                this.sendLogonAccept(event.peerId);
+                LoginHandler.handleLogon(enet, event.peerId, event.connectID, this.peers, text);
             }
         } else if (type === 4) {
             // Unpack TankPacket
@@ -126,18 +121,6 @@ class GTPSServer {
     private onDisconnect(event: any) {
         console.log(`[DISCONNECT] Peer (ConnectID: ${event.connectID}) disconnected.`);
         this.peers.delete(event.connectID);
-    }
-
-    private sendLogonAccept(peerId: number) {
-        // String Packet: type 3
-        const logondoc = "action|logon_fail\n" // Just placeholder to test if connect succeeds, in GT real server this would be action|logon_accept
-        const packet = Buffer.alloc(4 + logondoc.length + 1);
-        packet.writeUInt32LE(3, 0);
-        packet.write(logondoc, 4, "utf-8");
-        packet.writeUInt8(0, packet.length - 1);
-        
-        enet.sendPacket(peerId, packet, FLAG_RELIABLE);
-        console.log("[SERVER] Logon packet sent back.");
     }
 }
 

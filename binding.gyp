@@ -19,7 +19,7 @@
       },
       "conditions": [
         ["OS=='win'", {
-          "defines": [ "_HAS_EXCEPTIONS=1", "ENET_DLL" ],
+          "defines": [ "_HAS_EXCEPTIONS=1" ],
           "msvs_settings": {
             "VCCLCompilerTool": {
               "ExceptionHandling": 1

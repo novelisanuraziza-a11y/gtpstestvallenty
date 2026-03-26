@@ -1,0 +1,22 @@
+{
+  "name": "ts-gtps",
+  "version": "1.0.0",
+  "description": "TypeScript GTPS using C++ ENet Native Addon",
+  "main": "dist/server.js",
+  "scripts": {
+    "build:addon": "node-gyp rebuild",
+    "build:ts": "tsc",
+    "build": "npm run build:addon && npm run build:ts",
+    "start": "node dist/server.js",
+    "dev": "ts-node src/server.ts"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.2",
+    "node-gyp": "^10.0.0"
+  }
+}

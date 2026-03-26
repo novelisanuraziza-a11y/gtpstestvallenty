@@ -1,0 +1,30 @@
+name: Build ENet Node Addon
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js 18
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18.x
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build C++ Addon
+      run: npm run build:addon
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: enet_wrapper_node
+        path: build/Release/enet_wrapper.node
